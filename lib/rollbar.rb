@@ -78,7 +78,13 @@ module Rollbar
 
       data = exception_data(exception, filtered_level(exception))
       if request_data
-        request_data[:env].reject!{|k, v| v.is_a?(IO) } if request_data[:env]
+        if request_data[:env]
+          request_data[:env].reject! do |k, v|
+            %w(rack.errors rack.input).include?(k.to_s) ||
+              k.slice(0, 15) == "action_dispatch"
+          end
+        end
+
         data[:request] = request_data
       end
       data[:person] = person_data if person_data
