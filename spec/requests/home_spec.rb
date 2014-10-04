@@ -35,16 +35,11 @@ describe HomeController do
     let!(:original_cookie_method){ ActionDispatch::Cookies::CookieJar.instance_method(cookie_method_name) }
     let!(:broken_cookie_method){ Proc.new{ |name| "1" - 1 } }
 
-    before(:each) do
-      ActionDispatch::Cookies::CookieJar.send(:define_method, cookie_method_name, broken_cookie_method)
-    end
-
-    after(:each) do
-      ActionDispatch::Cookies::CookieJar.send(:define_method, cookie_method_name, original_cookie_method)
-    end
-
     it "should report uncaught exceptions" do
-      expect { get 'current_user' }.to raise_exception
+      ActionDispatch::Cookies::CookieJar.send(:define_method, cookie_method_name, broken_cookie_method)
+      get 'current_user'
+      response.status.should == 500
+      ActionDispatch::Cookies::CookieJar.send(:define_method, cookie_method_name, original_cookie_method)
 
       body = Rollbar.last_report[:body]
       trace = body[:trace] && body[:trace] || body[:trace_chain][0]
